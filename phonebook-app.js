@@ -1,6 +1,20 @@
 const express = require('express')
+const morgan = require('morgan')
+const morganBody = require('morgan-body')
+
 
 const app = express()
+app.use(express.json())
+//allow morgan use the dev format, this provides information about http req and res
+app.use(morgan('dev'))
+
+//middleware
+//configure morgan body to log http requests body
+morganBody(app, {
+  noColors: false,
+  logReqUserAgent: false,
+  logrequestBody: true
+})
 
 //persons array
 let persons = [
@@ -70,7 +84,7 @@ const newId = Math.floor(Math.random() * 10)
 app.post('/api/persons', (request, response) => {
   const body = request.body
 
-  if (!body.name || !body.number || persons.hasOwnProperty('name')) {
+  if (!body.name || !body.number || persons.hasOwnProperty('name') === true) {
     return response.status(400).json({ 
       error: 'record already exists' 
     })
@@ -85,6 +99,15 @@ app.post('/api/persons', (request, response) => {
   persons = persons.concat(entry)
   response.json(entry)
 })
+
+
+//error handler middleware
+const errorHandler = (err, req, res, next) => {
+  res.status(500).json({error: 'something went wrong'})
+  console.log(err.stack)
+}
+
+app.use(errorHandler)
 
 //listen for requests
 const PORT = 3000
