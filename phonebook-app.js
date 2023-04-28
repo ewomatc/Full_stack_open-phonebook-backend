@@ -1,48 +1,17 @@
+require('dotenv').config()
 const express = require('express')
-const morgan = require('morgan')
-const morganBody = require('morgan-body')
-
+const mongoose = require('mongoose')
+const Person = require('./models/person')
 
 const app = express()
 app.use(express.json())
-//allow morgan use the dev format, this provides information about http req and res
-app.use(morgan('dev'))
 
-//middleware
-//configure morgan body to log http requests body
-morganBody(app, {
-  noColors: false,
-  logReqUserAgent: false,
-  logrequestBody: true
-})
 
-//persons array
-let persons = [
-  { 
-    id: 1,
-    name: "Arto Hellas", 
-    number: "040-123456"
-  },
-  { 
-    id: 2,
-    name: "Ada Lovelace", 
-    number: "39-44-5323523"
-  },
-  { 
-    id: 3,
-    name: "Dan Abramov", 
-    number: "12-43-234345"
-  },
-  { 
-    id: 4,
-    name: "Mary Poppendieck", 
-    number: "39-23-6423122"
-  }
-]
 //get request for all persons
 app.get('/api/persons', (req, res) => {
-  res.json(persons)
-  console.log('GET request made for persons')
+  Person.find({})
+    .then(result => res.json(result), console.log('REQUEST MADE FOR ALL NOTES'))
+    .catch(err =>  console.log(err.message))
 })
 
 //get info page
@@ -71,46 +40,40 @@ app.get('/api/persons/:id', (req, res) => {
 
 //delete a single phonbook entry by id
 app.delete('/api/persons/:id', (req, res) => {
-  const id = Number(req.params.id)
+  const id = req.params.id
 
-  persons = persons.filter(person => person.id !== id)
-  console.log('data deleted successfully')
-  res.status(204).end()
+  Person.findByIdAndRemove(id)
+    .then(res.status(204).end())
+    .catch(err => {console.log(err.message)})
 })
 
 //post a new phonebook entry
-const newId = Math.floor(Math.random() * 10)
+app.post('/api/persons', (req, res) => {
+  const body = req.body
 
-app.post('/api/persons', (request, response) => {
-  const body = request.body
-
-  if (!body.name || !body.number || persons.hasOwnProperty('name') === true) {
-    return response.status(400).json({ 
-      error: 'record already exists' 
-    })
-  }
-
-  const entry = {
+  newEntry = new Person({
     name: body.name,
-    number: body.number,
-    id: newId
-  }
+    number: body.number
+  })
 
-  persons = persons.concat(entry)
-  response.json(entry)
+  newEntry.save()
+    .then(result => res.json(result))
+    .catch(err => console.log(err.message))
 })
 
 
 //error handler middleware
 const errorHandler = (err, req, res, next) => {
-  res.status(500).json({error: 'something went wrong'})
-  console.log(err.stack)
+  console.log(err.message);
+
+  if(err.name === CastError) {
+    res.status(404).send(`Wrong id format`)
+  }
+  next(err)
 }
-
 app.use(errorHandler)
-
 //listen for requests
-const PORT = 3000
+const PORT = process.env.PORT
 app.listen(PORT, () => {
   console.log(`server running on port ${PORT}`)
 })
