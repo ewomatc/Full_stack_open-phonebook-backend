@@ -14,22 +14,11 @@ app.get('/api/persons', (req, res) => {
     .catch(err =>  console.log(err.message))
 })
 
-//get info page
-app.get('/info', (req, res) => {
-  const currentPersons = persons.length  
-
-  res.send(`Phonebook has info for ${currentPersons} people
-
-  ${Date()}`)
-
-})
-
 //get a single phonebook entry
 app.get('/api/persons/:id', (req, res) => {
   const id = Number(req.params.id)
 
   const person = persons.find(person => person.id === id)
-  
 })
 
 //delete a single phonbook entry by id
@@ -52,16 +41,26 @@ app.post('/api/persons', (req, res) => {
 
   newEntry.save()
     .then(result => res.json(result))
-    .catch(err => console.log(err.message))
+    .catch(err => next(err))
 })
 
+//update a phonebook entry
+app.put('/api/persons/:id', (req, res, next) => {
+  const {name, number} = req.body
+
+  Person.findByIdAndUpdate(req.params.id, {name, number}, {new: true, runValidators: true, context: 'query'})
+    .then(updatedPerson => {res.json(updatedPerson)})
+    .catch(err => next(err))
+})
 
 //error handler middleware
 const errorHandler = (err, req, res, next) => {
   console.log(err.message);
 
-  if(err.name === CastError) {
-    res.status(404).send(`Wrong id format`)
+  if(err.name === 'CastError') {
+    res.status(400).send(`Wrong id format`)
+  } else if(err.name === 'ValidationError') {
+    res.status(400).json(err.message)
   }
   next(err)
 }
